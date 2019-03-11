@@ -1,7 +1,9 @@
 {
     "extends": "tsconfig-seek",
     "include": ["src"],
+    "exclude": ["node_modules", "**/*.spec.ts", "**/*.test.ts", "__mocks__"],
     "compilerOptions": {
-        "outDir": "./dist", 
+        "allowJs": false,
+        "outDir": "./dist",
     }
 }

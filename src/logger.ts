@@ -1,31 +1,22 @@
 import pino, { Logger } from 'pino';
-
-interface AWSLambdaMetadata {
-  executionEnv?: string;
-  functionName?: string;
-  functionMemorySize?: string;
-  functionVersion?: string;
-  logStreamName?: string;
-}
+import lambdaEnhancer from './enhancers/aws-lambda-enchancer';
+import appEnhancer from './enhancers/node-app-enhancer';
+import ec2Enhancer from './enhancers/aws-ec2-enchancer';
+import { Enhancer } from './enhancers/interface';
 
 interface LogMetadata {
   sourceType: string;
   environment?: string;
-  lambda?: AWSLambdaMetadata;
-  [key: string]: string | AWSLambdaMetadata | undefined;
+  [key: string]: string | object | undefined;
 }
 
-const isLambda = () =>
-  !!((process.env.LAMBDA_TASK_ROOT && process.env.AWS_EXECUTION_ENV) || false);
+const enhancers: Enhancer[] = [ec2Enhancer, lambdaEnhancer, appEnhancer];
 
 const filterUndefinedValues = (data: any) =>
   Object.keys(data)
     .filter(key => typeof data[key] !== 'undefined')
     .reduce((result, key) => ({ ...result, [key]: data[key] }), {});
 
-// enable ISO time stamps rather than epoch time
-// note: this results in much slower logging
-// https://github.com/pinojs/pino/blob/238fe2857501dca963783d93915506012c8b43bf/docs/legacy.md#v5-4
 const getTimeStamp = () => `,"time":"${new Date().toISOString()}"`;
 
 const getBaseLogger = (): Logger => {
@@ -47,34 +38,20 @@ const getMetadata = (): LogMetadata => {
     sourceType: '_json',
     environment: process.env.NODE_ENV || process.env.STAGE,
   };
-  return isLambda()
-    ? {
-        ...baseMetadata,
-        lambda: {
-          executionEnv: process.env.AWS_EXECUTION_ENV,
-          functionName: process.env.AWS_LAMBDA_FUNCTION_NAME,
-          functionMemorySize: process.env.AWS_LAMBDA_FUNCTION_MEMORY_SIZE,
-          functionVersion: process.env.AWS_LAMBDA_FUNCTION_VERSION,
-          logStreamName: process.env.AWS_LAMBDA_LOG_STREAM_NAME,
-        },
-      }
-    : baseMetadata;
+  const metadata = enhancers.reduce(
+    (result, enhancer) =>
+      enhancer.isEnabled()
+        ? { ...result, [enhancer.metadataKey]: enhancer.getMetadata() }
+        : {},
+    {}
+  );
+  return { ...baseMetadata, ...metadata };
 };
+
 export const createLogger = (): Logger => {
   const logger: Logger = getBaseLogger();
   const metadata: LogMetadata = getMetadata();
   const definedMetadata = filterUndefinedValues(metadata);
-
-  if (
-    isLambda() &&
-    // @ts-ignore
-    process.stdout._handle &&
-    // @ts-ignore
-    typeof process.stdout._handle.setBlocking === 'function'
-  ) {
-    // @ts-ignore
-    process.stdout._handle.setBlocking(true);
-  }
 
   return logger.child(definedMetadata);
 };
