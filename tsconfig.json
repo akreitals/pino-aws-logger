@@ -1,0 +1,7 @@
+{
+    "extends": "tsconfig-seek",
+    "include": ["src"],
+    "compilerOptions": {
+        "outDir": "./dist", 
+    }
+}

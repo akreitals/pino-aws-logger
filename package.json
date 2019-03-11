@@ -1,0 +1,75 @@
+{
+  "name": "pino-aws-logger",
+  "version": "0.1.0",
+  "description": "NodeJS logger for AWS Lamdba and EC2 using pino",
+  "main": "dist/logger.js",
+  "types": "dist/types.d.ts",
+  "scripts": {
+    "test": "jest --config jestconfig.json",
+    "build": "tsc",
+    "format": "prettier --write 'src/**/*.ts'",
+    "lint": "tslint -p tsconfig.json",
+    "prepare": "npm run build",
+    "prepublishOnly": "npm test && npm run lint",
+    "preversion": "npm run lint",
+    "version": "npm run format && git add -A src",
+    "postversion": "git push && git push --tags",
+    "commit": "git-cz"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/akreitals/pino-aws-logger.git"
+  },
+  "keywords": [
+    "lambda",
+    "ec2",
+    "logger",
+    "pino"
+  ],
+  "author": "Adam Kreitals",
+  "license": "MIT",
+  "files": [
+    "/dist/**/*"
+  ],
+  "bugs": {
+    "url": "https://github.com/akreitals/pino-aws-logger/issues"
+  },
+  "homepage": "https://github.com/akreitals/pino-aws-logger#readme",
+  "dependencies": {
+    "pino": "^5.11.1"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^7.5.2",
+    "@types/jest": "^24.0.11",
+    "@types/pino": "^5.8.5",
+    "commitizen": "^3.0.7",
+    "commitlint-config-seek": "^1.0.0",
+    "cz-conventional-changelog": "^2.1.0",
+    "husky": "^1.3.1",
+    "jest": "^24.3.1",
+    "lint-staged": "^8.1.5",
+    "prettier": "^1.16.4",
+    "ts-jest": "^24.0.0",
+    "tsconfig-seek": "^1.0.2",
+    "tslint": "^5.13.1",
+    "tslint-config-seek": "^1.1.0",
+    "typescript": "^3.3.3333"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged",
+      "commit-msg": "commitlint --edit --extends seek"
+    }
+  },
+  "config": {
+    "commitizen": {
+      "path": "./node_modules/cz-conventional-changelog"
+    }
+  },
+  "lint-staged": {
+    "src/**/*.ts": [
+      "npm run format",
+      "git add"
+    ]
+  }
+}
