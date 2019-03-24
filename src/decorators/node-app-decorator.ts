@@ -1,6 +1,7 @@
-import { Enhancer } from './interface';
+import { LogDecorator } from './log-decorator';
+import { name, version } from '../../package.json';
 
-export interface NodeAppEnhancer extends Enhancer {
+export interface NodeAppDecorator extends LogDecorator {
   getMetadata: () => NodeAppMetadata;
 }
 
@@ -14,14 +15,14 @@ const isEnabled = (): boolean => true;
 const metadataKey = 'app';
 
 const getMetadata = (): NodeAppMetadata => ({
-  name: 'test-app-name',
-  version: '0.1.0',
+  name,
+  version,
 });
 
-const enhancer: NodeAppEnhancer = {
+const decorator: NodeAppDecorator = {
   isEnabled,
   metadataKey,
   getMetadata,
 };
 
-export default enhancer;
+export default decorator;

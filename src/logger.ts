@@ -1,8 +1,8 @@
 import pino, { Logger } from 'pino';
-import lambdaEnhancer from './enhancers/aws-lambda-enchancer';
-import appEnhancer from './enhancers/node-app-enhancer';
-import ec2Enhancer from './enhancers/aws-ec2-enchancer';
-import { Enhancer } from './enhancers/interface';
+import lambdaDecorator from './decorators/aws-lambda-decorator';
+import appDecorator from './decorators/node-app-decorator';
+import ec2Decorator from './decorators/aws-ec2-decorator';
+import { LogDecorator } from './decorators/log-decorator';
 
 interface LogMetadata {
   sourceType: string;
@@ -10,7 +10,11 @@ interface LogMetadata {
   [key: string]: string | object | undefined;
 }
 
-const enhancers: Enhancer[] = [ec2Enhancer, lambdaEnhancer, appEnhancer];
+const decorators: LogDecorator[] = [
+  appDecorator,
+  lambdaDecorator,
+  ec2Decorator,
+];
 
 const filterUndefinedValues = (data: any) =>
   Object.keys(data)
@@ -33,25 +37,42 @@ const getBaseLogger = (): Logger => {
   return pino(options);
 };
 
-const getMetadata = (): LogMetadata => {
+const getMetadata = async (): Promise<LogMetadata> => {
   const baseMetadata = {
     sourceType: '_json',
     environment: process.env.NODE_ENV || process.env.STAGE,
   };
-  const metadata = enhancers.reduce(
-    (result, enhancer) =>
-      enhancer.isEnabled()
-        ? { ...result, [enhancer.metadataKey]: enhancer.getMetadata() }
-        : {},
-    {}
-  );
-  return { ...baseMetadata, ...metadata };
+
+  let metadata = {};
+  for (const decorator of decorators) {
+    try {
+      if (await decorator.isEnabled()) {
+        metadata = {
+          ...metadata,
+          [decorator.metadataKey]: await decorator.getMetadata(),
+        };
+      }
+    } catch (e) {
+      throw new Error(
+        `Could not apply '${decorator.metadataKey}' decorator: ${e}`
+      );
+    }
+  }
+
+  return { ...baseMetadata, ...filterUndefinedValues(metadata) };
 };
 
-export const createLogger = (): Logger => {
+export const createLogger = (): Promise<Logger> => {
   const logger: Logger = getBaseLogger();
-  const metadata: LogMetadata = getMetadata();
-  const definedMetadata = filterUndefinedValues(metadata);
 
-  return logger.child(definedMetadata);
+  return getMetadata()
+    .then(metadata => {
+      const definedMetadata = filterUndefinedValues(metadata);
+      return logger.child(definedMetadata);
+    })
+    .catch(e => {
+      // tslint:disable-next-line:no-console
+      console.log('it fucked: ', e);
+      return logger;
+    });
 };

@@ -1,6 +1,6 @@
-import { Enhancer } from './interface';
+import { LogDecorator } from './log-decorator';
 
-export interface AwsLambdaEnhancer extends Enhancer {
+export interface AwsLambdaDecorator extends LogDecorator {
   getMetadata: () => AwsLambdaMetadata;
 }
 
@@ -12,8 +12,12 @@ interface AwsLambdaMetadata {
   logStreamName?: string;
 }
 
-const isEnabled = (): boolean =>
-  !!((process.env.LAMBDA_TASK_ROOT && process.env.AWS_EXECUTION_ENV) || false);
+const isEnabled = async (): Promise<boolean> => {
+  return !!(
+    (process.env.LAMBDA_TASK_ROOT && process.env.AWS_EXECUTION_ENV) ||
+    false
+  );
+};
 
 const metadataKey = 'lambda';
 
@@ -38,10 +42,10 @@ const getMetadata = (): AwsLambdaMetadata => ({
   }
 })();
 
-const enhancer: AwsLambdaEnhancer = {
+const decorator: AwsLambdaDecorator = {
   isEnabled,
   metadataKey,
   getMetadata,
 };
 
-export default enhancer;
+export default decorator;
