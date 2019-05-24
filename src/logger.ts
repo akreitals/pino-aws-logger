@@ -1,8 +1,8 @@
-import pino, { Logger } from 'pino';
-import lambdaDecorator from './decorators/aws-lambda-decorator';
-import appDecorator from './decorators/node-app-decorator';
-import ec2Decorator from './decorators/aws-ec2-decorator';
-import { LogDecorator } from './decorators/log-decorator';
+import pino, { Logger, LoggerOptions } from 'pino';
+import lambdaDecorator from './decorators/awsLambdaDecorator';
+import appDecorator from './decorators/nodeAppDecorator';
+import ec2Decorator from './decorators/awsEC2Decorator';
+import { LogDecorator } from './decorators/logDecoratorInterface';
 
 interface LogMetadata {
   sourceType: string;
@@ -10,11 +10,15 @@ interface LogMetadata {
   [key: string]: string | object | undefined;
 }
 
-const decorators: LogDecorator[] = [
+const defaultDecorators: LogDecorator[] = [
   appDecorator,
   lambdaDecorator,
   ec2Decorator,
 ];
+
+interface PinoAwsLoggerOptions extends LoggerOptions {
+  decorators?: LogDecorator[];
+}
 
 const filterUndefinedValues = (data: any) =>
   Object.keys(data)
@@ -23,9 +27,9 @@ const filterUndefinedValues = (data: any) =>
 
 const getTimeStamp = () => `,"time":"${new Date().toISOString()}"`;
 
-const getBaseLogger = (): Logger => {
+const getBaseLogger = (options?: LoggerOptions): Logger => {
   const level = process.env.LOG_LEVEL || 'info';
-  const options = {
+  const defaults = {
     base: null,
     level,
     useLevelLabels: true,
@@ -34,10 +38,12 @@ const getBaseLogger = (): Logger => {
     serializers: { ...pino.stdSerializers, error: pino.stdSerializers.err },
   };
 
-  return pino(options);
+  return pino({ ...options, ...defaults });
 };
 
-const getMetadata = async (): Promise<LogMetadata> => {
+const getMetadata = async (
+  decorators: LogDecorator[]
+): Promise<LogMetadata> => {
   const baseMetadata = {
     sourceType: '_json',
     environment: process.env.NODE_ENV || process.env.STAGE,
@@ -62,17 +68,18 @@ const getMetadata = async (): Promise<LogMetadata> => {
   return { ...baseMetadata, ...filterUndefinedValues(metadata) };
 };
 
-export const createLogger = (): Promise<Logger> => {
-  const logger: Logger = getBaseLogger();
+export const createLogger = (
+  options: PinoAwsLoggerOptions = {}
+): Promise<Logger> => {
+  const { decorators = [], ...pinoOptions } = options;
+  const logger: Logger = getBaseLogger(pinoOptions);
 
-  return getMetadata()
+  return getMetadata([...decorators, ...defaultDecorators])
     .then(metadata => {
       const definedMetadata = filterUndefinedValues(metadata);
       return logger.child(definedMetadata);
     })
-    .catch(e => {
-      // tslint:disable-next-line:no-console
-      console.log('it fucked: ', e);
+    .catch(() => {
       return logger;
     });
 };

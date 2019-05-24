@@ -1,4 +1,4 @@
-import { LogDecorator } from './log-decorator';
+import { LogDecorator } from './logDecoratorInterface';
 import { name, version } from '../../package.json';
 
 export interface NodeAppDecorator extends LogDecorator {

@@ -1,4 +1,4 @@
-import { LogDecorator } from './log-decorator';
+import { LogDecorator } from './logDecoratorInterface';
 
 export interface AwsLambdaDecorator extends LogDecorator {
   getMetadata: () => AwsLambdaMetadata;

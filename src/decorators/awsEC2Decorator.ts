@@ -1,7 +1,7 @@
 import util from 'util';
 import axios from 'axios';
 import AWS from 'aws-sdk';
-import { LogDecorator } from './log-decorator';
+import { LogDecorator } from './logDecoratorInterface';
 
 export interface AwsEc2Decorator extends LogDecorator {
   getMetadata: () => Promise<AwsEc2Metadata>;
