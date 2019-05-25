@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "NodeJS logger for AWS Lamdba and EC2 using pino",
   "main": "dist/logger.js",
-  "types": "dist/types.d.ts",
+  "types": "dist/logger.d.ts",
   "scripts": {
     "test": "jest --config jestconfig.json",
     "build": "tsc --declaration",

@@ -1,5 +1,5 @@
 import util from 'util';
-import axios from 'axios';
+// import axios from 'axios';
 import AWS from 'aws-sdk';
 import { LogDecorator } from './logDecoratorInterface';
 
@@ -19,11 +19,14 @@ const isEnabled = async (): Promise<boolean> => {
   try {
     // Identification of EC2 instance
     // See https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/identify_ec2_instances.html
-    const response = await axios.head(
-      'http://169.254.169.254/latest/dynamic/instance-identity/',
-      { timeout: 250 }
-    );
-    return response.status >= 200 && response.status < 300;
+    // const response = await axios.head(
+    //   'http://169.254.169.254/latest/dynamic/instance-identity/',
+    //   { timeout: 250 }
+    // );
+    // return response.status >= 200 && response.status < 300;
+    const ami = await readMetaDataAsync('ami_id');
+
+    return !!ami;
   } catch (e) {
     return false;
   }

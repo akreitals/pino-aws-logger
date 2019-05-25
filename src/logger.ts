@@ -4,6 +4,10 @@ import appDecorator from './decorators/nodeAppDecorator';
 import ec2Decorator from './decorators/awsEC2Decorator';
 import { LogDecorator } from './decorators/logDecoratorInterface';
 
+export interface PinoAwsLoggerOptions extends LoggerOptions {
+  decorators?: LogDecorator[];
+}
+
 interface LogMetadata {
   sourceType: string;
   environment?: string;
@@ -15,10 +19,6 @@ const defaultDecorators: LogDecorator[] = [
   lambdaDecorator,
   ec2Decorator,
 ];
-
-interface PinoAwsLoggerOptions extends LoggerOptions {
-  decorators?: LogDecorator[];
-}
 
 const filterUndefinedValues = (data: any) =>
   Object.keys(data)
@@ -38,7 +38,7 @@ const getBaseLogger = (options?: LoggerOptions): Logger => {
     serializers: { ...pino.stdSerializers, error: pino.stdSerializers.err },
   };
 
-  return pino({ ...options, ...defaults });
+  return pino({ ...defaults, ...options });
 };
 
 const getMetadata = async (

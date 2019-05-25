@@ -1,20 +1,11 @@
-import { createLogger } from './logger';
+import { createLogger, PinoAwsLoggerOptions } from './logger';
 import { Logger } from 'pino';
-import axios from 'axios';
+import { LogDecorator } from './decorators/logDecoratorInterface';
+import { setupEnv } from '../test/environmentHelper';
 
-const setupEnv = (envKey: string, value: string | undefined) => {
-  const backupEnv = process.env[envKey];
-
-  process.env[envKey] = value;
-
-  return function restore() {
-    if (typeof backupEnv !== 'undefined') {
-      process.env[envKey] = backupEnv;
-    } else {
-      delete process.env[envKey];
-    }
-  };
-};
+import lambdaDecorator from './decorators/awsLambdaDecorator';
+import appDecorator from './decorators/nodeAppDecorator';
+import ec2Decorator from './decorators/awsEC2Decorator';
 
 describe('pino aws logger', () => {
   const stdoutSpy: jest.SpyInstance = jest.spyOn(process.stdout, 'write');
@@ -83,111 +74,94 @@ describe('pino aws logger', () => {
     }
   });
 
-  describe('Node app decorator', () => {
-    [
-      {
-        property: 'name',
-      },
-      {
-        property: 'version',
-      },
-    ].forEach(({ property }) => {
-      it(`should log the ${property} from the package.json file`, async () => {
-        logger = await createLogger();
-        logger.info({ someObject: { someNesting: true } }, 'some message');
-        const callJson = getLogObject();
+  describe('Config options', () => {
+    it('should override default option with options provided to logger', async () => {
+      const options: PinoAwsLoggerOptions = {
+        base: { pid: process.pid },
+      };
+      logger = await createLogger(options);
 
-        expect(callJson).toHaveProperty(`app.${property}`);
-      });
+      logger.info('message');
+
+      const callJson: object = getLogObject();
+      expect(callJson).toHaveProperty('pid');
+    });
+
+    it('should allow pino options to be provided to the logger', async () => {
+      const options: PinoAwsLoggerOptions = {
+        customLevels: {
+          foo: 35,
+        },
+      };
+      logger = await createLogger(options);
+
+      logger.foo('message');
+
+      const callJson: object = getLogObject();
+      expect(callJson).toHaveProperty('level', 'foo');
     });
   });
 
-  describe('AWS Lambda decorator', () => {
-    let restoreTaskRoot: () => void;
-    let restoreExecutionEnv: () => void;
-
-    beforeAll(() => {
-      restoreTaskRoot = setupEnv('LAMBDA_TASK_ROOT', 'task-root');
-      restoreExecutionEnv = setupEnv('AWS_EXECUTION_ENV', 'aws execution env');
-    });
-
-    afterAll(() => {
-      restoreTaskRoot();
-      restoreExecutionEnv();
-    });
-
-    [
-      {
-        property: 'executionEnv',
-        envKey: 'AWS_EXECUTION_ENV',
-        value: 'execution environment',
-      },
-      {
-        property: 'functionName',
-        envKey: 'AWS_LAMBDA_FUNCTION_NAME',
-        value: 'lambda name',
-      },
-      {
-        property: 'functionMemorySize',
-        envKey: 'AWS_LAMBDA_FUNCTION_MEMORY_SIZE',
-        value: '4MB',
-      },
-      {
-        property: 'functionVersion',
-        envKey: 'AWS_LAMBDA_FUNCTION_VERSION',
-        value: 'test-env',
-      },
-      {
-        property: 'logStreamName',
-        envKey: 'AWS_LAMBDA_LOG_STREAM_NAME',
-        value: 'test stream',
-      },
-    ].forEach(({ property, envKey, value }) => {
-      it(`should log the property '${property}' when the AWS environment variable '${envKey}' is set`, async () => {
-        const restore: () => void = setupEnv(envKey, value);
-
-        logger = await createLogger();
-        logger.info({ someObject: { someNesting: true } }, 'some message');
-        const callJson = getLogObject();
-
-        try {
-          expect(callJson).toHaveProperty(`lambda.${property}`, value);
-        } finally {
-          restore();
-        }
-      });
-    });
-  });
-
-  describe('AWS EC2 decorator', () => {
-    it('should not add ec2 metadata if the instance identity endpoint does not exist', async () => {
-      const mockedAxiosHead = jest.spyOn(axios, 'head');
-
-      // @ts-ignore
-      mockedAxiosHead.mockRejectedValue({ status: 500 });
+  describe('Log decorators', () => {
+    xit('should check the availability of the default log decorators', async () => {
+      ec2Decorator.isEnabled = jest.fn().mockRejectedValue(false);
+      lambdaDecorator.isEnabled = jest.fn().mockRejectedValue(false);
+      appDecorator.isEnabled = jest.fn().mockRejectedValue(true);
 
       logger = await createLogger();
-      logger.info({ someObject: { someNesting: true } }, 'some message');
-      const callJson = getLogObject();
+      logger.info('1');
+      logger.info('2');
+      logger.info('3');
 
-      expect(callJson).not.toHaveProperty(`ec2`);
+      expect(ec2Decorator.isEnabled).toBeCalledTimes(1);
+      expect(lambdaDecorator.isEnabled).toBeCalledTimes(1);
+      expect(appDecorator.isEnabled).toBeCalledTimes(1);
 
-      mockedAxiosHead.mockRestore();
+      jest.restoreAllMocks();
     });
 
-    xit('should add ec2 metadata if the instance identity endpoint exists', async () => {
-      const mockedAxiosHead = jest.spyOn(axios, 'head');
-
-      // @ts-ignore
-      mockedAxiosHead.mockResolvedValue({ status: 200 });
+    xit('should only request the log decorator metadata once', async () => {
+      ec2Decorator.isEnabled = jest.fn().mockRejectedValue(true);
+      lambdaDecorator.isEnabled = jest.fn().mockRejectedValue(true);
+      appDecorator.isEnabled = jest.fn().mockRejectedValue(true);
+      ec2Decorator.getMetadata = jest
+        .fn()
+        .mockRejectedValue({ metadata: 'data' });
+      lambdaDecorator.getMetadata = jest
+        .fn()
+        .mockRejectedValue({ metadata: 'data' });
+      appDecorator.getMetadata = jest
+        .fn()
+        .mockRejectedValue({ metadata: 'data' });
 
       logger = await createLogger();
-      logger.info({ someObject: { someNesting: true } }, 'some message');
-      const callJson = getLogObject();
+      logger.info('1');
+      logger.info('2');
+      logger.info('3');
 
-      expect(callJson).toHaveProperty(`ec2`);
+      expect(ec2Decorator.getMetadata).toBeCalledTimes(1);
+      expect(lambdaDecorator.getMetadata).toBeCalledTimes(1);
+      expect(appDecorator.getMetadata).toBeCalledTimes(1);
 
-      mockedAxiosHead.mockRestore();
+      jest.restoreAllMocks();
+    });
+
+    it('should allow custom decorators to be added to the logger instance', async () => {
+      const testMetadata = { metadata1: 'one', metadata2: 2 };
+      const testDecorator: LogDecorator = {
+        isEnabled: async () => true,
+        metadataKey: 'test-decorator',
+        getMetadata: async () => testMetadata,
+      };
+      const options: PinoAwsLoggerOptions = {
+        decorators: [testDecorator],
+      };
+      logger = await createLogger(options);
+
+      logger.info('message');
+
+      const callJson: object = getLogObject();
+      expect(callJson).toHaveProperty('test-decorator', testMetadata);
     });
   });
 

@@ -10,7 +10,7 @@ interface NodeAppMetadata {
   version: string;
 }
 
-const isEnabled = (): boolean => true;
+const isEnabled = (): Promise<boolean> => Promise.resolve(true);
 
 const metadataKey = 'app';
 
