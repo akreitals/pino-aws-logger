@@ -39,8 +39,7 @@
   "dependencies": {
     "aws-sdk": "^2.463.0",
     "axios": "^0.18.0",
-    "pino": "^5.12.5",
-    "root-require": "^0.3.1"
+    "pino": "^5.12.5"
   },
   "devDependencies": {
     "@commitlint/cli": "^7.6.1",
