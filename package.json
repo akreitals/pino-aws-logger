@@ -6,6 +6,7 @@
   "types": "dist/logger.d.ts",
   "scripts": {
     "test": "jest --config jestconfig.json",
+    "prebuild": "rm -rf dist",
     "build": "tsc --declaration",
     "format": "prettier --write 'src/**/*.ts'",
     "lint": "tslint -p tsconfig.json",
@@ -38,7 +39,8 @@
   "dependencies": {
     "aws-sdk": "^2.463.0",
     "axios": "^0.18.0",
-    "pino": "^5.12.5"
+    "pino": "^5.12.5",
+    "root-require": "^0.3.1"
   },
   "devDependencies": {
     "@commitlint/cli": "^7.6.1",

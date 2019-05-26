@@ -1,5 +1,6 @@
 import { LogDecorator } from './logDecoratorInterface';
-import { name, version } from '../../package.json';
+// tslint:disable-next-line:no-var-requires
+const { name, version } = require('root-require')('package.json');
 
 export interface NodeAppDecorator extends LogDecorator {
   getMetadata: () => NodeAppMetadata;

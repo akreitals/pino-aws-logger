@@ -1,10 +1,10 @@
 {
     "extends": "tsconfig-seek",
     "include": ["src"],
-    "exclude": ["node_modules", "**/*.spec.ts", "**/*.test.ts", "__mocks__"],
+    "exclude": ["node_modules", "**/*.spec.ts", "**/*.test.ts", "test", "__mocks__"],
     "compilerOptions": {
         "allowJs": false,
         "outDir": "./dist",
-        "resolveJsonModule": true
+        "resolveJsonModule": false
     }
 }
