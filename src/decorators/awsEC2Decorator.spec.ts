@@ -5,9 +5,9 @@ import decorator from './awsEC2Decorator';
 
 describe('AWS Lambda decorator', () => {
   it('should be enabled when an instance identity resource can be located', async () => {
-    // tslint:disable-next-line:no-object-literal-type-assertion
     const mockedAxiosHead = jest
       .spyOn(axios, 'head')
+      // tslint:disable-next-line:no-object-literal-type-assertion
       .mockResolvedValue({ status: 200 } as AxiosResponse);
     await expect(decorator.isEnabled()).resolves.toBeTruthy();
     mockedAxiosHead.mockRestore();
