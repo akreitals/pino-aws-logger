@@ -19,7 +19,7 @@ describe('AWS Lambda decorator', () => {
     return expect(decorator.isEnabled()).resolves.toBeTruthy();
   });
 
-  it('should be enabled when a task root and execution enviroment variables are not available', () => {
+  it('should not be enabled when a task root and execution enviroment variables are not available', () => {
     restoreTaskRoot();
     restoreExecutionEnv();
 
