@@ -3,10 +3,6 @@ import { Logger } from 'pino';
 import { LogDecorator } from './decorators/logDecoratorInterface';
 import { setupEnv } from '../test/environmentHelper';
 
-import lambdaDecorator from './decorators/awsLambdaDecorator';
-import appDecorator from './decorators/nodeAppDecorator';
-import ec2Decorator from './decorators/awsEC2Decorator';
-
 describe('pino aws logger', () => {
   const stdoutSpy: jest.SpyInstance = jest.spyOn(process.stdout, 'write');
   let logger: Logger;
@@ -15,17 +11,12 @@ describe('pino aws logger', () => {
     expect(stdoutSpy).toHaveBeenCalled();
     try {
       return JSON.parse(stdoutSpy.mock.calls[0]);
-    } catch (e) {
-      return {
-        errora: e,
-        message: stdoutSpy.mock.calls[0],
-        two: stdoutSpy.mock.calls[1],
-      };
+    } catch (error) {
+      return stdoutSpy.mock.calls.join('\n----\n');
     }
   };
 
-  beforeEach(() => {
-    jest.resetModules();
+  afterEach(() => {
     jest.resetAllMocks();
   });
 
@@ -103,47 +94,59 @@ describe('pino aws logger', () => {
   });
 
   describe('Log decorators', () => {
-    xit('should check the availability of the default log decorators', async () => {
-      ec2Decorator.isEnabled = jest.fn().mockRejectedValue(false);
-      lambdaDecorator.isEnabled = jest.fn().mockRejectedValue(false);
-      appDecorator.isEnabled = jest.fn().mockRejectedValue(true);
+    it('should only check for enabled decorators once', async () => {
+      const testDecorator: LogDecorator = {
+        isEnabled: jest.fn(),
+        metadataKey: 'test-decorator',
+        getMetadata: jest.fn(),
+      };
+      const options: PinoAwsLoggerOptions = {
+        decorators: [testDecorator],
+      };
 
-      logger = await createLogger();
+      logger = await createLogger(options);
+
       logger.info('1');
       logger.info('2');
       logger.info('3');
 
-      expect(ec2Decorator.isEnabled).toBeCalledTimes(1);
-      expect(lambdaDecorator.isEnabled).toBeCalledTimes(1);
-      expect(appDecorator.isEnabled).toBeCalledTimes(1);
-
-      jest.restoreAllMocks();
+      expect(testDecorator.isEnabled).toBeCalledTimes(1);
     });
 
-    xit('should only request the log decorator metadata once', async () => {
-      ec2Decorator.isEnabled = jest.fn().mockRejectedValue(true);
-      lambdaDecorator.isEnabled = jest.fn().mockRejectedValue(true);
-      appDecorator.isEnabled = jest.fn().mockRejectedValue(true);
-      ec2Decorator.getMetadata = jest
-        .fn()
-        .mockRejectedValue({ metadata: 'data' });
-      lambdaDecorator.getMetadata = jest
-        .fn()
-        .mockRejectedValue({ metadata: 'data' });
-      appDecorator.getMetadata = jest
-        .fn()
-        .mockRejectedValue({ metadata: 'data' });
+    it('should not check for a log decorator metadata if it is not enabled', async () => {
+      const testDecorator: LogDecorator = {
+        isEnabled: jest.fn().mockResolvedValue(false),
+        metadataKey: 'test-decorator',
+        getMetadata: jest.fn(),
+      };
+      const options: PinoAwsLoggerOptions = {
+        decorators: [testDecorator],
+      };
 
-      logger = await createLogger();
+      logger = await createLogger(options);
+
+      logger.info('message');
+
+      expect(testDecorator.getMetadata).not.toBeCalled();
+    });
+
+    it('should only request the log decorator metadata once', async () => {
+      const testDecorator: LogDecorator = {
+        isEnabled: jest.fn().mockResolvedValue(true),
+        metadataKey: 'test-decorator',
+        getMetadata: jest.fn(),
+      };
+      const options: PinoAwsLoggerOptions = {
+        decorators: [testDecorator],
+      };
+
+      logger = await createLogger(options);
+
       logger.info('1');
       logger.info('2');
       logger.info('3');
 
-      expect(ec2Decorator.getMetadata).toBeCalledTimes(1);
-      expect(lambdaDecorator.getMetadata).toBeCalledTimes(1);
-      expect(appDecorator.getMetadata).toBeCalledTimes(1);
-
-      jest.restoreAllMocks();
+      expect(testDecorator.getMetadata).toBeCalledTimes(1);
     });
 
     it('should allow custom decorators to be added to the logger instance', async () => {

@@ -52,7 +52,8 @@ const getMetadata = async (
   let metadata = {};
   for (const decorator of decorators) {
     try {
-      if (await decorator.isEnabled()) {
+      const isEnabled = await decorator.isEnabled();
+      if (isEnabled) {
         metadata = {
           ...metadata,
           [decorator.metadataKey]: await decorator.getMetadata(),
