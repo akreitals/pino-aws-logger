@@ -14,12 +14,6 @@ interface LogMetadata {
   [key: string]: string | object | undefined;
 }
 
-const defaultDecorators: LogDecorator[] = [
-  appDecorator,
-  lambdaDecorator,
-  ec2Decorator,
-];
-
 const filterUndefinedValues = (data: any) =>
   Object.keys(data)
     .filter(key => typeof data[key] !== 'undefined')
@@ -75,7 +69,7 @@ export const createLogger = (
   const { decorators = [], ...pinoOptions } = options;
   const logger: Logger = getBaseLogger(pinoOptions);
 
-  return getMetadata([...decorators, ...defaultDecorators])
+  return getMetadata([...decorators])
     .then(metadata => {
       const definedMetadata = filterUndefinedValues(metadata);
       return logger.child(definedMetadata);
@@ -84,3 +78,13 @@ export const createLogger = (
       return logger;
     });
 };
+
+export const lambdaLogger = (
+  options: PinoAwsLoggerOptions = {}
+): Promise<Logger> =>
+  createLogger({ ...options, decorators: [lambdaDecorator] });
+
+export const ec2Logger = (
+  options: PinoAwsLoggerOptions = {}
+): Promise<Logger> =>
+  createLogger({ ...options, decorators: [appDecorator, ec2Decorator] });
