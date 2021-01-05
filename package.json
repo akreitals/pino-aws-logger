@@ -38,7 +38,7 @@
   "homepage": "https://github.com/akreitals/pino-aws-logger#readme",
   "dependencies": {
     "aws-sdk": "^2.463.0",
-    "axios": "^0.18.0",
+    "axios": "^0.21.1",
     "pino": "^5.12.5"
   },
   "devDependencies": {
